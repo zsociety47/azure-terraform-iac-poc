@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">Infrastructure as Code with Terraform on Azure</title>
+  <desc id="desc">A laptop uses Terraform to manage a resource group. Inside it, nsg-web is attached to snet-backend in vnet-tf-poc.</desc>
+  <rect width="1200" height="380" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6e7681"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#107c10"/>
+    </marker>
+  </defs>
+
+  <line x1="240" y1="190" x2="362" y2="190" stroke="#6e7681" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-gray)"/>
+  <line x1="640" y1="190" x2="840" y2="190" stroke="#107c10" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <g font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+    <rect x="40" y="135" width="200" height="110" rx="8" fill="#6e7681" stroke="#484f58" stroke-width="1.5"/>
+    <text x="140" y="172" fill="#ffffff" font-size="16" font-weight="600" text-anchor="middle">Operator laptop</text>
+    <text x="140" y="196" fill="#ffffff" font-size="14" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="middle">terraform plan</text>
+    <text x="140" y="218" fill="#ffffff" font-size="14" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="middle">terraform apply</text>
+
+    <rect x="268" y="176" width="84" height="28" fill="#ffffff"/>
+    <text x="310" y="195" fill="#484f58" font-size="13" font-weight="600" text-anchor="middle">Terraform</text>
+
+    <rect x="370" y="63" width="790" height="254" rx="8" fill="#fbfbfc" stroke="#484f58" stroke-width="1.5"/>
+    <rect x="390" y="52" width="214" height="22" fill="#ffffff"/>
+    <text x="400" y="68" fill="#484f58" font-size="14" font-weight="600">rg-tf-poc-zeon01 · East US</text>
+
+    <rect x="410" y="135" width="230" height="110" rx="8" fill="#107c10" stroke="#0b5a0b" stroke-width="1.5"/>
+    <text x="525" y="176" fill="#ffffff" font-size="16" font-weight="600" text-anchor="middle">nsg-web</text>
+    <text x="525" y="198" fill="#ffffff" font-size="14" text-anchor="middle">Network security group</text>
+    <text x="525" y="218" fill="#ffffff" font-size="13" text-anchor="middle">default rules</text>
+
+    <rect x="668" y="176" width="78" height="28" fill="#fbfbfc"/>
+    <text x="707" y="195" fill="#0b5a0b" font-size="13" font-weight="600" text-anchor="middle">attached</text>
+
+    <rect x="816" y="103" width="304" height="174" rx="8" fill="#ffffff" stroke="#484f58" stroke-width="1.5"/>
+    <rect x="832" y="92" width="176" height="22" fill="#fbfbfc"/>
+    <text x="840" y="108" fill="#484f58" font-size="14" font-weight="600">vnet-tf-poc · 10.2.0.0/16</text>
+
+    <rect x="848" y="135" width="240" height="110" rx="8" fill="#0078d4" stroke="#005a9e" stroke-width="1.5"/>
+    <text x="968" y="182" fill="#ffffff" font-size="16" font-weight="600" text-anchor="middle">snet-backend</text>
+    <text x="968" y="206" fill="#ffffff" font-size="14" font-family="ui-monospace, Menlo, Consolas, monospace" text-anchor="middle">10.2.1.0/24</text>
+  </g>
+</svg>
