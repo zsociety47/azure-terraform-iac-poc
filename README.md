@@ -11,7 +11,7 @@ The walkthrough video is added here after it is recorded. Face on camera for the
 - **What it is:** a virtual network on Microsoft Azure, described in text files. Terraform creates it, adds a firewall later without rebuilding it, and removes it with one command.
 - **What's automated:** `terraform plan` shows the change before anything is created. `terraform apply` builds it. `./scripts/verify.sh` checks the result. `terraform destroy` deletes it.
 - **Why it's secure:** the network security group is attached to the subnet and has no custom allow rule. The state file, which holds resource identifiers, stays off GitHub. The subscription id is not in these files.
-- **Result:** all six verify checks passed while the network was up. `terraform destroy` then removed the resource group. Screenshots of that run are not in the repository yet.
+- **Result:** all six verify checks passed while the network was up. `terraform destroy` then removed the resource group. The screenshots are in the steps below.
 
 Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technical details are in [Technical findings](#technical-findings) at the bottom.
 
@@ -21,7 +21,12 @@ Part of [Cloud Projects](https://github.com/zsociety47/cloud-projects). Technica
 
 These steps follow the files in the order each one needs the one before it. A reference such as `azurerm_resource_group.rg.name` is both a value and a dependency: Terraform waits for that resource group before it creates the virtual network.
 
-On a fresh copy of this repository, every file is already present, so the first `terraform plan` lists all five resources. The "1 to add" lines below are what the plan showed when that file was the new one. To see a one-resource plan yourself, keep only the files through that step and leave the later files out.
+The firewall is two files, `nsg.tf` and `nsg_association.tf`, so it can be added after the network already exists. Move them aside before the first plan. Terraform only reads files whose names end in `.tf`. Apply the network, put the two files back, and the second plan adds the firewall without changing the network.
+
+```bash
+mkdir -p /tmp/tf-later
+mv nsg.tf nsg_association.tf /tmp/tf-later/
+```
 
 Have Terraform 1.15 and the Azure command-line interface (CLI) installed, and sign in with `az login` before the first plan. Set the subscription for the terminal session without writing it into a file:
 
@@ -37,7 +42,7 @@ export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
 
 `terraform init` downloads the provider into `.terraform/`. `terraform apply` writes `terraform.tfstate`, Terraform's record of resource identifiers. Both are ignored. `.terraform.lock.hcl` is not ignored. It pins the provider build so the next run uses the same one.
 
-<!-- ![.gitignore listing the state file and the provider folder](docs/images/step-01-gitignore.png) -->
+![.gitignore listing the state file and the provider folder](docs/images/step-01-gitignore.png)
 
 ### Step 2: Pin the provider
 
@@ -51,7 +56,7 @@ terraform init
 
 The last line should be `Terraform has been successfully initialized!`
 
-<!-- ![terraform init finished and the lock file written](docs/images/step-02-init.png) -->
+![terraform init finished and the lock file written](docs/images/step-02-init.png)
 
 ### Step 3: Sign in without storing the subscription id
 
@@ -59,7 +64,7 @@ The last line should be `Terraform has been successfully initialized!`
 
 The provider uses the Azure CLI login already on the machine. There is no `subscription_id` line in the file. The value comes from `ARM_SUBSCRIPTION_ID`. `features {}` is required even when empty. `resource_provider_registrations = "none"` means apply does not register Azure resource providers. `Microsoft.Network` is already registered on a subscription that has created a virtual network before.
 
-<!-- ![provider block with features and no subscription id](docs/images/step-03-provider.png) -->
+![provider block with features and no subscription id](docs/images/step-03-provider.png)
 
 ### Step 4: Put the names in one place
 
@@ -79,22 +84,13 @@ Tags on the resource group, the virtual network, and the network security group:
 
 The address space `10.2.0.0/16` can exist beside other networks that use `10.0.0.0/16` and `10.1.0.0/16`.
 
-<!-- ![variables.tf with the names and the address space](docs/images/step-04-names.png) -->
+![variables.tf with the names and the address space](docs/images/step-04-names.png)
 
 ### Step 5: Create the resource group
 
 *Declared in `resource_group.tf`. Created by `terraform apply`.*
 
-Every resource in this build lives in this group. The virtual network file points at `azurerm_resource_group.rg`, so the group is declared first.
-
-```bash
-terraform plan
-terraform apply
-```
-
-When this file was the only resource, the plan was `1 to add, 0 to change, 0 to destroy`. The group name is `rg-tf-poc-zeon01`. Type the full word `yes` at the prompt.
-
-<!-- ![Plan showing one resource group to add](docs/images/step-05-resource-group-plan.png) -->
+Every resource in this build lives in this group. The virtual network file points at `azurerm_resource_group.rg`, so the group is declared first. The group name is `rg-tf-poc-zeon01`. The first plan is in step 7, after the subnet file, while the firewall files are still set aside.
 
 ### Step 6: Create the virtual network
 
@@ -102,41 +98,46 @@ When this file was the only resource, the plan was `1 to add, 0 to change, 0 to 
 
 `location` and `resource_group_name` come from the resource group, so Terraform will not create the network until the group exists. The address space is `10.2.0.0/16`.
 
-When this file was added to a group that already existed, the plan was `1 to add, 0 to change, 0 to destroy`. The resource group was refreshed and left unchanged. The new resource was `vnet-tf-poc`.
-
-<!-- ![Plan showing only vnet-tf-poc to add](docs/images/step-06-vnet-plan.png) -->
-
 ### Step 7: Cut the subnet
 
 *Declared in `subnet.tf`. Created by `terraform apply`.*
 
 `snet-backend` uses `10.2.1.0/24`, a slice of `10.2.0.0/16`. `virtual_network_name` points at `azurerm_virtual_network.vnet`, so the network has to exist first. This file does not mention the network security group.
 
-When this file was the new one, the plan added only `snet-backend`. The resource group and the virtual network stayed as they were.
+With the firewall files still set aside, plan and apply. The plan is `3 to add, 0 to change, 0 to destroy`: the resource group, `vnet-tf-poc`, and `snet-backend`. Type the full word `yes`.
 
-<!-- ![Plan showing only snet-backend, prefix 10.2.1.0/24](docs/images/step-07-subnet-plan.png) -->
+```bash
+terraform plan
+terraform apply
+```
+
+![Plan showing three resources to add, the firewall files set aside](docs/images/step-07-network-plan.png)
 
 ### Step 8: Add the firewall to the live network
 
 *Declared in `nsg.tf`. Created by `terraform apply`.*
 
-A network security group (NSG) is the subnet firewall. `nsg-web` needs only the resource group. It is a separate file so it can be added after the subnet is already running. There is no custom rule in this file.
-
-When this file was the new one, the plan was `1 to add, 0 to change, 0 to destroy`. The resource group, `vnet-tf-poc`, and `snet-backend` were refreshed and left unchanged. The plan does not attach the group to the subnet. That is the next file.
-
-<!-- ![Plan showing only nsg-web to add](docs/images/step-08-nsg-plan.png) -->
+A network security group (NSG) is the subnet firewall. `nsg-web` needs only the resource group. It is a separate file so it can be added after the subnet is already running. There is no custom rule in this file. This file does not attach the group to the subnet. That is the next file.
 
 ### Step 9: Attach the firewall to the subnet
 
 *Declared in `nsg_association.tf`. Created by `terraform apply`.*
 
-The association names `azurerm_subnet.subnet.id` and `azurerm_network_security_group.nsg.id`. Both sides have to exist first. After this apply, Azure's default rules apply to `snet-backend`: traffic from inside the virtual network is allowed, and other inbound traffic is denied.
+The association names `azurerm_subnet.subnet.id` and `azurerm_network_security_group.nsg.id`. Both sides have to exist first. Put the two firewall files back. Both were moved together, so both come back before this plan.
 
-When this file was the new one, the plan added only the association. The other four resources were unchanged.
+```bash
+mv /tmp/tf-later/nsg.tf /tmp/tf-later/nsg_association.tf .
+terraform plan
+terraform apply
+```
+
+The plan is `2 to add, 0 to change, 0 to destroy`. The two new resources are `nsg-web` and the association. The `0 to change` means the resource group, `vnet-tf-poc`, and `snet-backend` already match the files, so Terraform leaves them alone. Type the full word `yes`. After this apply, Azure's default rules apply to `snet-backend`: traffic from inside the virtual network is allowed, and other inbound traffic is denied.
+
+![Plan showing the firewall to add and zero to change](docs/images/step-09-firewall-plan.png)
 
 In the portal, open `rg-tf-poc-zeon01`, then `vnet-tf-poc`, then **Subnets**. `snet-backend` shows prefix `10.2.1.0/24` and network security group `nsg-web`.
 
-<!-- ![snet-backend with prefix 10.2.1.0/24 and nsg-web](docs/images/step-09-subnet-nsg.png) -->
+![snet-backend with prefix 10.2.1.0/24 and nsg-web](docs/images/step-09-subnet-nsg.png)
 
 ### Step 10: Check the live network
 
@@ -159,7 +160,7 @@ A passing run looks like this:
 6  terraform plan reports no changes: PASS
 ```
 
-<!-- ![Verify script with six PASS lines](docs/images/step-10-verify.png) -->
+![Verify script with six PASS lines](docs/images/step-10-verify.png)
 
 ### Step 11: Remove it
 
@@ -173,7 +174,7 @@ terraform destroy
 
 The plan should be `0 to add, 0 to change, 5 to destroy`. When it finishes, `rg-tf-poc-zeon01` is gone. The state file is updated, so the next plan does not look for resources that were deleted by hand in the portal.
 
-<!-- ![Destroy complete, five resources removed](docs/images/step-11-destroy.png) -->
+![Destroy complete, five resources removed](docs/images/step-11-destroy.png)
 
 ---
 
@@ -184,13 +185,18 @@ You need Terraform 1.15.x, the Azure CLI, and a current `az login`. From the rep
 ```bash
 export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
 terraform init
+mkdir -p /tmp/tf-later
+mv nsg.tf nsg_association.tf /tmp/tf-later/
+terraform plan
+terraform apply
+mv /tmp/tf-later/nsg.tf /tmp/tf-later/nsg_association.tf .
 terraform plan
 terraform apply
 ./scripts/verify.sh
 terraform destroy
 ```
 
-`terraform init` is once per machine. It covers step 2. `terraform plan` and `terraform apply` cover steps 5 through 9 in one pass when every file is already in the folder. On an empty state file the plan is `5 to add, 0 to change, 0 to destroy`: the resource group, `vnet-tf-poc`, `snet-backend`, `nsg-web`, and the association. Type `yes` only after you have read that plan. `./scripts/verify.sh` is step 10. `terraform destroy` is step 11, and it asks for `yes` on its own.
+`terraform init` is once per machine. It covers step 2. The first `terraform plan` is step 7: `3 to add, 0 to change, 0 to destroy`, the resource group, `vnet-tf-poc`, and `snet-backend`. The second `terraform plan` is step 9: `2 to add, 0 to change, 0 to destroy`, `nsg-web` and the association. Type `yes` only after you have read each plan. `./scripts/verify.sh` is step 10. `terraform destroy` is step 11, and it asks for `yes` on its own. After the second `mv`, the folder matches this repository again.
 
 If Microsoft Entra ID asks for multi-factor authentication, approve it in the browser. Do not add `--use-device-code` to `az login`. That flow is often blocked when the computer is not registered with Entra ID.
 
@@ -232,13 +238,13 @@ A Terraform configuration can create a resource group and a virtual network, the
 
 | # | Criterion | How it is checked | Result |
 |---|-----------|-------------------|--------|
-| 1 | `rg-tf-poc-zeon01` exists in East US | `./scripts/verify.sh` check 1 | Passed on the verify run. Screenshot not in the repository yet |
-| 2 | `vnet-tf-poc` address space is `10.2.0.0/16` | `./scripts/verify.sh` check 2 | Passed on the verify run. Screenshot not in the repository yet |
-| 3 | `snet-backend` prefix is `10.2.1.0/24` | `./scripts/verify.sh` check 3 | Passed on the verify run. Screenshot not in the repository yet |
-| 4 | `nsg-web` exists | `./scripts/verify.sh` check 4 | Passed on the verify run. Screenshot not in the repository yet |
-| 5 | `snet-backend` uses `nsg-web` | `./scripts/verify.sh` check 5 | Passed on the verify run. Screenshot not in the repository yet |
-| 6 | After apply, `terraform plan` reports no changes | `./scripts/verify.sh` check 6 | Passed on the verify run. Screenshot not in the repository yet |
-| 7 | `terraform destroy` removes the resource group | `az group exists --name rg-tf-poc-zeon01` is false | Passed. The group was gone after destroy. Screenshot not in the repository yet |
+| 1 | `rg-tf-poc-zeon01` exists in East US | `./scripts/verify.sh` check 1 | ✅ [verify](docs/images/step-10-verify.png) |
+| 2 | `vnet-tf-poc` address space is `10.2.0.0/16` | `./scripts/verify.sh` check 2 | ✅ [verify](docs/images/step-10-verify.png) |
+| 3 | `snet-backend` prefix is `10.2.1.0/24` | `./scripts/verify.sh` check 3 | ✅ [verify](docs/images/step-10-verify.png) |
+| 4 | `nsg-web` exists | `./scripts/verify.sh` check 4 | ✅ [verify](docs/images/step-10-verify.png) |
+| 5 | `snet-backend` uses `nsg-web` | `./scripts/verify.sh` check 5 | ✅ [verify](docs/images/step-10-verify.png) |
+| 6 | After apply, `terraform plan` reports no changes | `./scripts/verify.sh` check 6 | ✅ [verify](docs/images/step-10-verify.png) |
+| 7 | `terraform destroy` removes the resource group | `az group exists --name rg-tf-poc-zeon01` is false | ✅ [destroy](docs/images/step-11-destroy.png) |
 
 ## What's in this repository
 
