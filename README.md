@@ -2,7 +2,7 @@
 
 ## Watch the walkthrough
 
-The walkthrough video is added here after it is recorded. Face on camera for the introduction, the architecture, and the close.
+[![Watch the video](docs/images/loom-thumbnail.gif)](https://www.loom.com/share/b0448fef104a4bdc90a3d7c63cad2014)
 
 **Author:** Zeon Stewart, [LinkedIn](LINKEDIN_LINK_HERE)
 
@@ -172,7 +172,7 @@ Destroy reads the state file and removes what it lists. The order follows the re
 terraform destroy
 ```
 
-The plan should be `0 to add, 0 to change, 5 to destroy`. When it finishes, `rg-tf-poc-zeon01` is gone. The state file is updated, so the next plan does not look for resources that were deleted by hand in the portal.
+The plan should be `0 to add, 0 to change, 5 to destroy`. When it finishes, `rg-tf-poc-zeon01` is gone. The state file is updated, so the next plan does not look for resources that were deleted by hand in the portal. Run `./scripts/verify.sh` once more and all six lines print `FAIL`. That is the expected result. There is nothing left for the checks to find.
 
 ![Destroy complete, five resources removed](docs/images/step-11-destroy.png)
 
