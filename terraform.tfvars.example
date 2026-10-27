@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored). Defaults in variables.tf are this
+# proof of concept. Change the resource group name and the owner tag.
+
+resource_group_name = "rg-tf-poc-yourname01"
+
+tags = {
+  project     = "azure-terraform-iac-poc"
+  environment = "poc"
+  managed-by  = "terraform"
+  owner       = "yourname"
+}

@@ -180,6 +180,10 @@ The plan should be `0 to add, 0 to change, 5 to destroy`. When it finishes, `rg-
 
 ## Automated setup
 
+### Run this as yourself
+
+The names in `variables.tf` are this proof of concept. Copy `terraform.tfvars.example` to `terraform.tfvars` (gitignored) and change `resource_group_name` and `tags.owner`. Put your owner word in the resource group name. Inside-the-group names (`vnet-tf-poc`, `snet-backend`) can stay; they only have to be unique in your group.
+
 You need Terraform 1.15.x, the Azure CLI, and a current `az login`. From the repository root:
 
 ```bash
